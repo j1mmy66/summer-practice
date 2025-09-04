@@ -1,0 +1,14 @@
+WITH r AS (
+  SELECT date, company,
+         close / LAG(close) OVER (PARTITION BY company ORDER BY date) - 1 AS ret
+  FROM public.quotes
+),
+c AS (
+  SELECT date, company,
+         SUM(LN(1+ret)) OVER (PARTITION BY company ORDER BY date) AS clog
+  FROM r WHERE ret IS NOT NULL
+)
+SELECT
+  date, company,
+  EXP(clog - MAX(clog) OVER (PARTITION BY company ORDER BY date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)) - 1 AS drawdown
+FROM c;
